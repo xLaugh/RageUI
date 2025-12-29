@@ -65,10 +65,8 @@ function RageUI.GoUp(Options)
                 local Audio = RageUI.Settings.Audio
                 RageUI.PlaySound(Audio[Audio.Use].UpDown.audioName, Audio[Audio.Use].UpDown.audioRef)
                 RageUI.LastControl = true
-                if (CurrentMenu.onIndexChange ~= nil) then
-                    Citizen.CreateThread(function()
-                        CurrentMenu.onIndexChange(CurrentMenu.Index)
-                    end)
+                if CurrentMenu.onIndexChange then
+                    CurrentMenu.onIndexChange(CurrentMenu.Index) -- Appel direct
                 end
             else
                 local Audio = RageUI.Settings.Audio
@@ -114,10 +112,8 @@ function RageUI.GoDown(Options)
                 local Audio = RageUI.Settings.Audio
                 RageUI.PlaySound(Audio[Audio.Use].UpDown.audioName, Audio[Audio.Use].UpDown.audioRef)
                 RageUI.LastControl = false
-                if (CurrentMenu.onIndexChange ~= nil) then
-                    Citizen.CreateThread(function()
-                        CurrentMenu.onIndexChange(CurrentMenu.Index)
-                    end)
+                if CurrentMenu.onIndexChange then
+                    CurrentMenu.onIndexChange(CurrentMenu.Index) -- Appel direct
                 end
             else
                 local Audio = RageUI.Settings.Audio
@@ -129,164 +125,160 @@ end
 
 function RageUI.GoActionControl(Controls, Action)
     local ctrl = Controls[Action or 'Left']
-    if ctrl.Enabled then
-        local keys = ctrl.Keys
-        for Index = 1, #keys do
-            if not ctrl.Pressed then
-                if _IsDisabledControlJustPressed(keys[Index][1], keys[Index][2]) then
-                    ctrl.Pressed = true
-                    Citizen.CreateThread(function()
-                        ctrl.Active = true
-                        Citizen.Wait(0.01)
-                        ctrl.Active = false
-                        Citizen.Wait(175)
-                        while ctrl.Enabled and _IsDisabledControlPressed(keys[Index][1], keys[Index][2]) do
-                            ctrl.Active = true
-                            Citizen.Wait(1)
-                            ctrl.Active = false
-                            Citizen.Wait(124)
-                        end
+    if not ctrl.Enabled or ctrl.Pressed then return end
+    
+    local keys = ctrl.Keys
+    local len = #keys
+    for i = 1, len do
+        local key = keys[i]
+        if _IsDisabledControlJustPressed(key[1], key[2]) then
+            ctrl.Active = true
+            ctrl.Pressed = true
+            Citizen.SetTimeout(1, function()
+                ctrl.Active = false
+                Citizen.SetTimeout(175, function()
+                    if ctrl.Enabled and _IsDisabledControlPressed(key[1], key[2]) then
+                        Citizen.CreateThread(function()
+                            while ctrl.Enabled and _IsDisabledControlPressed(key[1], key[2]) do
+                                ctrl.Active = true
+                                Citizen.Wait(1)
+                                ctrl.Active = false
+                                Citizen.Wait(100)
+                            end
+                            ctrl.Pressed = false
+                        end)
+                    else
                         ctrl.Pressed = false
-                        if (Action ~= ControlActions[5]) then
-                            Citizen.Wait(10)
-                        end
-                    end)
-                    break
-                end
-            end
+                    end
+                end)
+            end)
+            return
         end
     end
 end
 
 function RageUI.GoActionControlSlider(Controls, Action)
     local ctrl = Controls[Action]
-    if ctrl.Enabled then
-        local keys = ctrl.Keys
-        for Index = 1, #keys do
-            if not ctrl.Pressed then
-                if _IsDisabledControlJustPressed(keys[Index][1], keys[Index][2]) then
-                    ctrl.Pressed = true
-                    Citizen.CreateThread(function()
-                        ctrl.Active = true
-                        Citizen.Wait(1)
-                        ctrl.Active = false
-                        while ctrl.Enabled and _IsDisabledControlPressed(keys[Index][1], keys[Index][2]) do
-                            ctrl.Active = true
-                            Citizen.Wait(1)
-                            ctrl.Active = false
-                        end
-                        ctrl.Pressed = false
-                    end)
-                    break
+    if not ctrl.Enabled or ctrl.Pressed then return end
+    
+    local keys = ctrl.Keys
+    local len = #keys
+    for i = 1, len do
+        local key = keys[i]
+        if _IsDisabledControlJustPressed(key[1], key[2]) then
+            ctrl.Active = true
+            ctrl.Pressed = true
+            Citizen.CreateThread(function()
+                Citizen.Wait(1)
+                ctrl.Active = false
+                while ctrl.Enabled and _IsDisabledControlPressed(key[1], key[2]) do
+                    ctrl.Active = true
+                    Citizen.Wait(1)
+                    ctrl.Active = false
                 end
-            end
+                ctrl.Pressed = false
+            end)
+            return
         end
     end
 end
+
+-- Cache pour éviter de recréer des tables
+local cachedInputDisabled = nil
+local cachedInputFrame = -1
 
 ---Controls
 ---@return nil
 ---@public
 function RageUI.Controls()
-    local CurrentMenu = RageUI.CurrentMenu;
-    if CurrentMenu ~= nil then
-        if CurrentMenu() then
-            if CurrentMenu.Open then
+    local CurrentMenu = RageUI.CurrentMenu
+    if not CurrentMenu or not CurrentMenu() or not CurrentMenu.Open then return end
 
-                local Controls = CurrentMenu.Controls;
-                ---@type number
-                local Options = CurrentMenu.Options
-                RageUI.Options = CurrentMenu.Options
-                if CurrentMenu.EnableMouse then
-                    -- DisableAllControlActions(2)
-                end
+    local Controls = CurrentMenu.Controls
+    local Options = CurrentMenu.Options
+    RageUI.Options = Options
 
-                local currentFrame = _GetFrameCount()
-                local inputDisabled = _IsInputDisabled(2)
-                if RageUI.Cache.InputDisabledFrame ~= currentFrame or RageUI.Cache.InputDisabled ~= inputDisabled then
-                    if not inputDisabled then
-                        local ctrlList = Controls.Enabled.Controller
-                        for Index = 1, #ctrlList do
-                            _EnableControlAction(ctrlList[Index][1], ctrlList[Index][2], true)
-                        end
-                    else
-                        local ctrlList = Controls.Enabled.Keyboard
-                        for Index = 1, #ctrlList do
-                            _EnableControlAction(ctrlList[Index][1], ctrlList[Index][2], true)
-                        end
+    -- Optimisation: vérifier l'état des contrôles une seule fois par frame
+    local currentFrame = _GetFrameCount()
+    if cachedInputFrame ~= currentFrame then
+        local inputDisabled = _IsInputDisabled(2)
+        if cachedInputDisabled ~= inputDisabled then
+            local ctrlList = inputDisabled and Controls.Enabled.Keyboard or Controls.Enabled.Controller
+            local len = #ctrlList
+            for i = 1, len do
+                local ctrl = ctrlList[i]
+                _EnableControlAction(ctrl[1], ctrl[2], true)
+            end
+            cachedInputDisabled = inputDisabled
+        end
+        cachedInputFrame = currentFrame
+    end
+
+    -- Up control
+    local ctrlUp = Controls.Up
+    if ctrlUp.Enabled and not ctrlUp.Pressed then
+        local keys = ctrlUp.Keys
+        for i = 1, #keys do
+            local key = keys[i]
+            if _IsDisabledControlJustPressed(key[1], key[2]) then
+                ctrlUp.Pressed = true
+                Citizen.CreateThread(function()
+                    RageUI.GoUp(Options)
+                    Citizen.Wait(175)
+                    while ctrlUp.Enabled and _IsDisabledControlPressed(key[1], key[2]) do
+                        RageUI.GoUp(Options)
+                        Citizen.Wait(50)
                     end
-                    RageUI.Cache.InputDisabled = inputDisabled
-                    RageUI.Cache.InputDisabledFrame = currentFrame
-                end
+                    ctrlUp.Pressed = false
+                end)
+                break
+            end
+        end
+    end
 
-                local ctrlUp = Controls.Up
-                if ctrlUp.Enabled then
-                    local keys = ctrlUp.Keys
-                    for Index = 1, #keys do
-                        if not ctrlUp.Pressed then
-                            if _IsDisabledControlJustPressed(keys[Index][1], keys[Index][2]) then
-                                ctrlUp.Pressed = true
-                                Citizen.CreateThread(function()
-                                    RageUI.GoUp(Options)
-                                    Citizen.Wait(175)
-                                    while ctrlUp.Enabled and _IsDisabledControlPressed(keys[Index][1], keys[Index][2]) do
-                                        RageUI.GoUp(Options)
-                                        Citizen.Wait(50)
-                                    end
-                                    ctrlUp.Pressed = false
-                                end)
-                                break
-                            end
-                        end
+    -- Down control
+    local ctrlDown = Controls.Down
+    if ctrlDown.Enabled and not ctrlDown.Pressed then
+        local keys = ctrlDown.Keys
+        for i = 1, #keys do
+            local key = keys[i]
+            if _IsDisabledControlJustPressed(key[1], key[2]) then
+                ctrlDown.Pressed = true
+                Citizen.CreateThread(function()
+                    RageUI.GoDown(Options)
+                    Citizen.Wait(175)
+                    while ctrlDown.Enabled and _IsDisabledControlPressed(key[1], key[2]) do
+                        RageUI.GoDown(Options)
+                        Citizen.Wait(50)
                     end
-                end
+                    ctrlDown.Pressed = false
+                end)
+                break
+            end
+        end
+    end
 
-                local ctrlDown = Controls.Down
-                if ctrlDown.Enabled then
-                    local keys = ctrlDown.Keys
-                    for Index = 1, #keys do
-                        if not ctrlDown.Pressed then
-                            if _IsDisabledControlJustPressed(keys[Index][1], keys[Index][2]) then
-                                ctrlDown.Pressed = true
-                                Citizen.CreateThread(function()
-                                    RageUI.GoDown(Options)
-                                    Citizen.Wait(175)
-                                    while ctrlDown.Enabled and _IsDisabledControlPressed(keys[Index][1], keys[Index][2]) do
-                                        RageUI.GoDown(Options)
-                                        Citizen.Wait(50)
-                                    end
-                                    ctrlDown.Pressed = false
-                                end)
-                                break
-                            end
-                        end
-                    end
-                end
+    -- Actions (Left, Right, Select, Click) - inline pour éviter les appels de fonction
+    RageUI.GoActionControl(Controls, 'Left')
+    RageUI.GoActionControl(Controls, 'Right')
+    RageUI.GoActionControl(Controls, 'Select')
+    RageUI.GoActionControl(Controls, 'Click')
+    RageUI.GoActionControlSlider(Controls, 'SliderLeft')
+    RageUI.GoActionControlSlider(Controls, 'SliderRight')
 
-                for i = 1, #ControlActions do
-                    RageUI.GoActionControl(Controls, ControlActions[i])
-                end
-
-                RageUI.GoActionControlSlider(Controls, 'SliderLeft')
-                RageUI.GoActionControlSlider(Controls, 'SliderRight')
-
-                local ctrlBack = Controls.Back
-                if ctrlBack.Enabled then
-                    local keys = ctrlBack.Keys
-                    for Index = 1, #keys do
-                        if not ctrlBack.Pressed then
-                            if _IsDisabledControlJustPressed(keys[Index][1], keys[Index][2]) then
-                                Controls.Back.Pressed = true
-                                Citizen.CreateThread(function()
-                                    Citizen.Wait(175)
-                                    Controls.Down.Pressed = false
-                                end)
-                                break
-                            end
-                        end
-                    end
-                end
-
+    -- Back control
+    local ctrlBack = Controls.Back
+    if ctrlBack.Enabled and not ctrlBack.Pressed then
+        local keys = ctrlBack.Keys
+        for i = 1, #keys do
+            local key = keys[i]
+            if _IsDisabledControlJustPressed(key[1], key[2]) then
+                Controls.Back.Pressed = true
+                Citizen.CreateThread(function()
+                    Citizen.Wait(175)
+                    Controls.Down.Pressed = false
+                end)
+                break
             end
         end
     end
@@ -296,62 +288,11 @@ end
 ---@return nil
 ---@public
 function RageUI.Navigation()
-    local CurrentMenu = RageUI.CurrentMenu;
-    if CurrentMenu ~= nil then
-        if CurrentMenu() and (CurrentMenu.Display.Navigation) then
-            if CurrentMenu.EnableMouse then
-                _SetMouseCursorActiveThisFrame()
-            end
-            if RageUI.Options > CurrentMenu.Pagination.Total then
-
-                ---@type boolean
-                local UpHovered = false
-
-                ---@type boolean
-                local DownHovered = false
-
-                if not CurrentMenu.SafeZoneSize then
-                    CurrentMenu.SafeZoneSize = { X = 0, Y = 0 }
-
-                    if CurrentMenu.Safezone then
-                        CurrentMenu.SafeZoneSize = RageUI.GetSafeZoneBounds()
-
-                        SetScriptGfxAlign(76, 84)
-                        SetScriptGfxAlignParams(0, 0, 0, 0)
-                    end
-                end
-
-                if CurrentMenu.EnableMouse then
-                    UpHovered = RageUI.IsMouseInBounds(CurrentMenu.X + CurrentMenu.SafeZoneSize.X, CurrentMenu.Y + CurrentMenu.SafeZoneSize.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, RageUI.Settings.Items.Navigation.Rectangle.Width + CurrentMenu.WidthOffset, RageUI.Settings.Items.Navigation.Rectangle.Height)
-                    DownHovered = RageUI.IsMouseInBounds(CurrentMenu.X + CurrentMenu.SafeZoneSize.X, CurrentMenu.Y + RageUI.Settings.Items.Navigation.Rectangle.Height + CurrentMenu.SafeZoneSize.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, RageUI.Settings.Items.Navigation.Rectangle.Width + CurrentMenu.WidthOffset, RageUI.Settings.Items.Navigation.Rectangle.Height)
-
-                    -- if CurrentMenu.Controls.Click.Active then
-                    --     if UpHovered then
-                    --         RageUI.GoUp(RageUI.Options)
-                    --     elseif DownHovered then
-                    --         RageUI.GoDown(RageUI.Options)
-                    --     end
-                    -- end
-
-                    -- if UpHovered then
-                    --     RenderRectangle(CurrentMenu.X, CurrentMenu.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, RageUI.Settings.Items.Navigation.Rectangle.Width + CurrentMenu.WidthOffset, RageUI.Settings.Items.Navigation.Rectangle.Height, 30, 30, 30, 255)
-                    -- else
-                    --     RenderRectangle(CurrentMenu.X, CurrentMenu.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, RageUI.Settings.Items.Navigation.Rectangle.Width + CurrentMenu.WidthOffset, RageUI.Settings.Items.Navigation.Rectangle.Height, 0, 0, 0, 200)
-                    -- end
-
-                    -- if DownHovered then
-                    --     RenderRectangle(CurrentMenu.X, CurrentMenu.Y + RageUI.Settings.Items.Navigation.Rectangle.Height + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, RageUI.Settings.Items.Navigation.Rectangle.Width + CurrentMenu.WidthOffset, RageUI.Settings.Items.Navigation.Rectangle.Height, 30, 30, 30, 255)
-                    -- else
-                    --     RenderRectangle(CurrentMenu.X, CurrentMenu.Y + RageUI.Settings.Items.Navigation.Rectangle.Height + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, RageUI.Settings.Items.Navigation.Rectangle.Width + CurrentMenu.WidthOffset, RageUI.Settings.Items.Navigation.Rectangle.Height, 0, 0, 0, 200)
-                    -- end
-                -- else
-                    --RenderRectangle(CurrentMenu.X, CurrentMenu.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, RageUI.Settings.Items.Navigation.Rectangle.Width + CurrentMenu.WidthOffset, RageUI.Settings.Items.Navigation.Rectangle.Height, 0, 0, 0, 200)
-                    --RenderRectangle(CurrentMenu.X, CurrentMenu.Y + RageUI.Settings.Items.Navigation.Rectangle.Height + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, RageUI.Settings.Items.Navigation.Rectangle.Width + CurrentMenu.WidthOffset, RageUI.Settings.Items.Navigation.Rectangle.Height, 0, 0, 0, 200)
-                end
-                --RenderSprite(RageUI.Settings.Items.Navigation.Arrows.Dictionary, RageUI.Settings.Items.Navigation.Arrows.Texture, CurrentMenu.X + RageUI.Settings.Items.Navigation.Arrows.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + RageUI.Settings.Items.Navigation.Arrows.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, RageUI.Settings.Items.Navigation.Arrows.Width, RageUI.Settings.Items.Navigation.Arrows.Height)
-                --RageUI.ItemOffset = RageUI.ItemOffset + (RageUI.Settings.Items.Navigation.Rectangle.Height * 2)
-            end
-        end
+    local CurrentMenu = RageUI.CurrentMenu
+    if not CurrentMenu or not CurrentMenu() or not CurrentMenu.Display.Navigation then return end
+    
+    if CurrentMenu.EnableMouse then
+        _SetMouseCursorActiveThisFrame()
     end
 end
 

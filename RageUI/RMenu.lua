@@ -85,7 +85,6 @@ end
 ---@public
 function RMenu:Delete(Type, Name)
     self[Type][Name] = nil
-    collectgarbage()
 end
 
 ---DeleteType
@@ -94,5 +93,4 @@ end
 ---@public
 function RMenu:DeleteType(Type)
     self[Type] = nil
-    collectgarbage()
 end

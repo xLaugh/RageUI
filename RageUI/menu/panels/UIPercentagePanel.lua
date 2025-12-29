@@ -1,81 +1,75 @@
-local Percentage = {
-    Background = { Dictionary = "commonmenu", Texture = "gradient_bgd", Y = 4, Width = 431, Height = 76 },
-    Bar = { X = 9, Y = 50, Width = 413, Height = 10 },
-    Text = {
-        Left = { X = 25, Y = 15, Scale = 0.35 },
-        Middle = { X = 215.5, Y = 15, Scale = 0.35 },
-        Right = { X = 398, Y = 15, Scale = 0.35 },
-    },
-}
+-- Constantes pré-calculées
+local PCT_BG_DICT = "commonmenu"
+local PCT_BG_TEX = "gradient_bgd"
+local PCT_BG_Y = 4
+local PCT_BG_W = 431
+local PCT_BG_H = 76
+local PCT_BAR_X = 9
+local PCT_BAR_Y = 50
+local PCT_BAR_W = 413
+local PCT_BAR_H = 10
+local PCT_TEXT_LEFT_X = 25
+local PCT_TEXT_LEFT_Y = 15
+local PCT_TEXT_MID_X = 215.5
+local PCT_TEXT_MID_Y = 15
+local PCT_TEXT_RIGHT_X = 398
+local PCT_TEXT_RIGHT_Y = 15
+local PCT_TEXT_SCALE = 0.35
 
----PercentagePanel
----@param Percent number
----@param HeaderText string
----@param MinText string
----@param MaxText string
----@param Callback function
----@param Index number
----@return nil
----@public
+local _IsDisabledControlPressed = IsDisabledControlPressed
+local _GetControlNormal = GetControlNormal
+local _round = math.round
+
 function RageUI.PercentagePanel(Percent, HeaderText, MinText, MaxText, Action, Index)
     local CurrentMenu = RageUI.CurrentMenu
+    if not CurrentMenu or not CurrentMenu() then return end
+    if Index and CurrentMenu.Index ~= Index then return end
 
-    if CurrentMenu ~= nil then
-        if CurrentMenu() and (Index == nil or (CurrentMenu.Index == Index)) then
+    local menuX = CurrentMenu.X
+    local menuY = CurrentMenu.Y
+    local widthOff = CurrentMenu.WidthOffset
+    local subH = CurrentMenu.SubtitleHeight
+    local itemOff = RageUI.ItemOffset
+    local safeX = CurrentMenu.SafeZoneSize.X
+    local safeY = CurrentMenu.SafeZoneSize.Y
+    local halfWidth = widthOff * 0.5
 
-            ---@type boolean
-            local Hovered = RageUI.IsMouseInBounds(CurrentMenu.X + Percentage.Bar.X + CurrentMenu.SafeZoneSize.X, CurrentMenu.Y + Percentage.Bar.Y + CurrentMenu.SafeZoneSize.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset - 4, Percentage.Bar.Width + CurrentMenu.WidthOffset, Percentage.Bar.Height + 8)
+    if Percent < 0.0 then Percent = 0.0
+    elseif Percent > 1.0 then Percent = 1.0 end
 
-            ---@type boolean
-            local Selected = false
+    local Progress = PCT_BAR_W * Percent
+    local barBaseX = menuX + PCT_BAR_X + halfWidth
+    local barBaseY = menuY + PCT_BAR_Y + subH + itemOff
 
-            ---@type number
-            local Progress = Percentage.Bar.Width
+    RenderSprite(PCT_BG_DICT, PCT_BG_TEX, menuX, menuY + PCT_BG_Y + subH + itemOff, PCT_BG_W + widthOff, PCT_BG_H)
+    RenderRectangle(barBaseX, barBaseY, PCT_BAR_W, PCT_BAR_H, 87, 87, 87, 255)
+    RenderRectangle(barBaseX, barBaseY, Progress, PCT_BAR_H, 245, 245, 245, 255)
 
-            if Percent < 0.0 then
-                Percent = 0.0
-            elseif Percent > 1.0 then
-                Percent = 1.0
-            end
+    RenderText(HeaderText or "Opacity", menuX + PCT_TEXT_MID_X + halfWidth, menuY + PCT_TEXT_MID_Y + subH + itemOff, 0, PCT_TEXT_SCALE, 245, 245, 245, 255, 1)
+    RenderText(MinText or "0%", menuX + PCT_TEXT_LEFT_X + halfWidth, menuY + PCT_TEXT_LEFT_Y + subH + itemOff, 0, PCT_TEXT_SCALE, 245, 245, 245, 255, 1)
+    RenderText(MaxText or "100%", menuX + PCT_TEXT_RIGHT_X + halfWidth, menuY + PCT_TEXT_RIGHT_Y + subH + itemOff, 0, PCT_TEXT_SCALE, 245, 245, 245, 255, 1)
 
-            Progress = Progress * Percent
+    local Hovered = RageUI.IsMouseInBounds(barBaseX + safeX, barBaseY + safeY - 4, PCT_BAR_W + widthOff, PCT_BAR_H + 8)
+    local Selected = false
 
-            RenderSprite(Percentage.Background.Dictionary, Percentage.Background.Texture, CurrentMenu.X, CurrentMenu.Y + Percentage.Background.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, Percentage.Background.Width + CurrentMenu.WidthOffset, Percentage.Background.Height)
-            RenderRectangle(CurrentMenu.X + Percentage.Bar.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Percentage.Bar.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, Percentage.Bar.Width, Percentage.Bar.Height, 87, 87, 87, 255)
-            RenderRectangle(CurrentMenu.X + Percentage.Bar.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Percentage.Bar.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, Progress, Percentage.Bar.Height, 245, 245, 245, 255)
+    if Hovered and _IsDisabledControlPressed(0, 24) then
+        Selected = true
+        Progress = _round(_GetControlNormal(2, 239) * 1920) - safeX - barBaseX
+        if Progress < 0 then Progress = 0
+        elseif Progress > PCT_BAR_W then Progress = PCT_BAR_W end
+        Percent = _round(Progress / PCT_BAR_W, 2)
+        if Action.onProgressChange then
+            Action.onProgressChange(Percent)
+        end
+    end
 
-            RenderText(HeaderText or "Opacity", CurrentMenu.X + Percentage.Text.Middle.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Percentage.Text.Middle.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, 0, Percentage.Text.Middle.Scale, 245, 245, 245, 255, 1)
-            RenderText(MinText or "0%", CurrentMenu.X + Percentage.Text.Left.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Percentage.Text.Left.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, 0, Percentage.Text.Left.Scale, 245, 245, 245, 255, 1)
-            RenderText(MaxText or "100%", CurrentMenu.X + Percentage.Text.Right.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Percentage.Text.Right.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, 0, Percentage.Text.Right.Scale, 245, 245, 245, 255, 1)
+    RageUI.ItemOffset = itemOff + PCT_BG_H + PCT_BG_Y
 
-            if Hovered then
-                if IsDisabledControlPressed(0, 24) then
-                    Selected = true
-
-                    Progress = math.round(GetControlNormal(2, 239) * 1920) - CurrentMenu.SafeZoneSize.X - (CurrentMenu.X + Percentage.Bar.X + (CurrentMenu.WidthOffset / 2))
-
-                    if Progress < 0 then
-                        Progress = 0
-                    elseif Progress > (Percentage.Bar.Width) then
-                        Progress = Percentage.Bar.Width
-                    end
-
-                    Percent = math.round(Progress / Percentage.Bar.Width, 2)
-                    if (Action.onProgressChange ~= nil) then
-                        Action.onProgressChange(Percent)
-                    end
-                end
-            end
-
-            RageUI.ItemOffset = RageUI.ItemOffset + Percentage.Background.Height + Percentage.Background.Y
-
-            if Hovered and Selected then
-                local Audio = RageUI.Settings.Audio
-                RageUI.PlaySound(Audio[Audio.Use].Slider.audioName, Audio[Audio.Use].Slider.audioRef, true)
-                if (Action.onSelected ~= nil) then
-                    Action.onSelected(Percent)
-                end
-            end
+    if Hovered and Selected then
+        local Audio = RageUI.Settings.Audio
+        RageUI.PlaySound(Audio[Audio.Use].Slider.audioName, Audio[Audio.Use].Slider.audioRef, true)
+        if Action.onSelected then
+            Action.onSelected(Percent)
         end
     end
 end

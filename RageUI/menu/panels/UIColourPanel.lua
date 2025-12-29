@@ -1,110 +1,97 @@
----@type table
-local Colour = {
-    Background = { Dictionary = "commonmenu", Texture = "gradient_bgd", Y = 4, Width = 431, Height = 112 },
-    LeftArrow = { Dictionary = "commonmenu", Texture = "arrowleft", X = 7.5, Y = 15, Width = 30, Height = 30 },
-    RightArrow = { Dictionary = "commonmenu", Texture = "arrowright", X = 393.5, Y = 15, Width = 30, Height = 30 },
-    Header = { X = 215.5, Y = 15, Scale = 0.35 },
-    Box = { X = 15, Y = 55, Width = 44.5, Height = 44.5 },
-    SelectedRectangle = { X = 15, Y = 47, Width = 44.5, Height = 8 },
-    Seperator = { Text = "of" }
-}
+-- Constantes pré-extraites
+local CLR_BG_DICT = "commonmenu"
+local CLR_BG_TEX = "gradient_bgd"
+local CLR_BG_Y = 4
+local CLR_BG_W = 431
+local CLR_BG_H = 112
+local CLR_LA_X = 7.5
+local CLR_LA_Y = 15
+local CLR_ARR_W = 30
+local CLR_ARR_H = 30
+local CLR_RA_X = 393.5
+local CLR_HDR_X = 215.5
+local CLR_HDR_Y = 15
+local CLR_HDR_SCALE = 0.35
+local CLR_BOX_X = 15
+local CLR_BOX_Y = 55
+local CLR_BOX_W = 44.5
+local CLR_BOX_H = 44.5
+local CLR_SEL_X = 15
+local CLR_SEL_Y = 47
+local CLR_SEL_W = 44.5
+local CLR_SEL_H = 8
 
----ColourPanel
----@param Title string
----@param Colours thread
----@param MinimumIndex number
----@param CurrentIndex number
----@param Callback function
----@return nil
----@public
+local _unpack = table.unpack
+
 function RageUI.ColourPanel(Title, Colours, MinimumIndex, CurrentIndex, Action, Index, Style)
-
-    ---@type table
-    local CurrentMenu = RageUI.CurrentMenu;
-
-    if CurrentMenu ~= nil then
-        if CurrentMenu() and (CurrentMenu.Index == Index) then
-
-            ---@type number
-            local Maximum = (#Colours > 9) and 9 or #Colours
-
-            ---@type boolean
-            local Hovered = RageUI.IsMouseInBounds(CurrentMenu.X + Colour.Box.X + CurrentMenu.SafeZoneSize.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Colour.Box.Y + CurrentMenu.SafeZoneSize.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, (Colour.Box.Width * Maximum), Colour.Box.Height)
-
-            ---@type number
-            local LeftArrowHovered = RageUI.IsMouseInBounds(CurrentMenu.X + Colour.LeftArrow.X + CurrentMenu.SafeZoneSize.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Colour.LeftArrow.Y + CurrentMenu.SafeZoneSize.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, Colour.LeftArrow.Width, Colour.LeftArrow.Height)
-
-            ---@type number
-            local RightArrowHovered = RageUI.IsMouseInBounds(CurrentMenu.X + Colour.RightArrow.X + CurrentMenu.SafeZoneSize.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Colour.RightArrow.Y + CurrentMenu.SafeZoneSize.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, Colour.RightArrow.Width, Colour.RightArrow.Height)
-
-            ---@type boolean
-            local Selected = false
-
-            RenderSprite(Colour.Background.Dictionary, Colour.Background.Texture, CurrentMenu.X, CurrentMenu.Y + Colour.Background.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, Colour.Background.Width + CurrentMenu.WidthOffset, Colour.Background.Height)
-            RenderSprite(Colour.LeftArrow.Dictionary, Colour.LeftArrow.Texture, CurrentMenu.X + Colour.LeftArrow.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Colour.LeftArrow.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, Colour.LeftArrow.Width, Colour.LeftArrow.Height)
-            RenderSprite(Colour.RightArrow.Dictionary, Colour.RightArrow.Texture, CurrentMenu.X + Colour.RightArrow.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Colour.RightArrow.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, Colour.RightArrow.Width, Colour.RightArrow.Height)
-
-            RenderRectangle(CurrentMenu.X + Colour.SelectedRectangle.X + (Colour.Box.Width * (CurrentIndex - MinimumIndex)) + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Colour.SelectedRectangle.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, Colour.SelectedRectangle.Width, Colour.SelectedRectangle.Height, 245, 245, 245, 255)
-
-            for Index = 1, Maximum do
-                RenderRectangle(CurrentMenu.X + Colour.Box.X + (Colour.Box.Width * (Index - 1)) + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Colour.Box.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, Colour.Box.Width, Colour.Box.Height, table.unpack(Colours[MinimumIndex + Index - 1]))
+    local CurrentMenu = RageUI.CurrentMenu
+    if not CurrentMenu or not CurrentMenu() or CurrentMenu.Index ~= Index then return end
+    
+    local menuX = CurrentMenu.X
+    local menuY = CurrentMenu.Y
+    local widthOff = CurrentMenu.WidthOffset
+    local subH = CurrentMenu.SubtitleHeight
+    local itemOff = RageUI.ItemOffset
+    local safeX = CurrentMenu.SafeZoneSize.X
+    local safeY = CurrentMenu.SafeZoneSize.Y
+    local halfWidth = widthOff * 0.5
+    local baseY = menuY + subH + itemOff
+    
+    local Maximum = (#Colours > 9) and 9 or #Colours
+    
+    local boxBaseX = menuX + CLR_BOX_X + halfWidth
+    local boxBaseY = baseY + CLR_BOX_Y
+    
+    local Hovered = RageUI.IsMouseInBounds(boxBaseX + safeX, boxBaseY + safeY, CLR_BOX_W * Maximum, CLR_BOX_H)
+    local LeftArrowHovered = RageUI.IsMouseInBounds(menuX + CLR_LA_X + safeX + halfWidth, baseY + CLR_LA_Y + safeY, CLR_ARR_W, CLR_ARR_H)
+    local RightArrowHovered = RageUI.IsMouseInBounds(menuX + CLR_RA_X + safeX + halfWidth, baseY + CLR_LA_Y + safeY, CLR_ARR_W, CLR_ARR_H)
+    
+    RenderSprite(CLR_BG_DICT, CLR_BG_TEX, menuX, baseY + CLR_BG_Y, CLR_BG_W + widthOff, CLR_BG_H)
+    RenderSprite(CLR_BG_DICT, "arrowleft", menuX + CLR_LA_X + halfWidth, baseY + CLR_LA_Y, CLR_ARR_W, CLR_ARR_H)
+    RenderSprite(CLR_BG_DICT, "arrowright", menuX + CLR_RA_X + halfWidth, baseY + CLR_LA_Y, CLR_ARR_W, CLR_ARR_H)
+    
+    RenderRectangle(menuX + CLR_SEL_X + (CLR_BOX_W * (CurrentIndex - MinimumIndex)) + halfWidth, baseY + CLR_SEL_Y, CLR_SEL_W, CLR_SEL_H, 245, 245, 245, 255)
+    
+    for i = 1, Maximum do
+        RenderRectangle(boxBaseX + (CLR_BOX_W * (i - 1)), boxBaseY, CLR_BOX_W, CLR_BOX_H, _unpack(Colours[MinimumIndex + i - 1]))
+    end
+    
+    local sepText = (type(Style) == "table" and type(Style.Seperator) == "table") and Style.Seperator.Text or "of"
+    RenderText((Title or "") .. " (" .. CurrentIndex .. " " .. sepText .. " " .. #Colours .. ")", menuX + CLR_HDR_X + halfWidth, baseY + CLR_HDR_Y, 0, CLR_HDR_SCALE, 245, 245, 245, 255, 1)
+    
+    if (Hovered or LeftArrowHovered or RightArrowHovered) and RageUI.Settings.Controls.Click.Active then
+        if LeftArrowHovered then
+            CurrentIndex = CurrentIndex - 1
+            if CurrentIndex < 1 then
+                CurrentIndex = #Colours
+                MinimumIndex = #Colours - Maximum + 1
+            elseif CurrentIndex < MinimumIndex then
+                MinimumIndex = MinimumIndex - 1
             end
-            
-            local ColourSeperator = {}
-            if type(Style) == "table" then
-                if type(Style.Seperator) == "table" then
-                    ColourSeperator = Style.Seperator
-                else
-                    ColourSeperator = Colour.Seperator
+        elseif RightArrowHovered then
+            CurrentIndex = CurrentIndex + 1
+            if CurrentIndex > #Colours then
+                CurrentIndex = 1
+                MinimumIndex = 1
+            elseif CurrentIndex > MinimumIndex + Maximum - 1 then
+                MinimumIndex = MinimumIndex + 1
+            end
+        elseif Hovered then
+            for i = 1, Maximum do
+                if RageUI.IsMouseInBounds(boxBaseX + (CLR_BOX_W * (i - 1)) + safeX, boxBaseY + safeY, CLR_BOX_W, CLR_BOX_H) then
+                    CurrentIndex = MinimumIndex + i - 1
+                    break
                 end
-            else
-                ColourSeperator = Colour.Seperator
-            end
-            
-            RenderText((Title and Title or "") .. " (" .. CurrentIndex .. " " .. ColourSeperator.Text .. " " .. #Colours .. ")", CurrentMenu.X + RageUI.Settings.Panels.Grid.Text.Top.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + RageUI.Settings.Panels.Grid.Text.Top.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, 0, RageUI.Settings.Panels.Grid.Text.Top.Scale, 245, 245, 245, 255, 1)
-
-            if Hovered or LeftArrowHovered or RightArrowHovered then
-                if RageUI.Settings.Controls.Click.Active then
-                    Selected = true
-
-                    if LeftArrowHovered then
-                        CurrentIndex = CurrentIndex - 1
-
-                        if CurrentIndex < 1 then
-                            CurrentIndex = #Colours
-                            MinimumIndex = #Colours - Maximum + 1
-                        elseif CurrentIndex < MinimumIndex then
-                            MinimumIndex = MinimumIndex - 1
-                        end
-                    elseif RightArrowHovered then
-                        CurrentIndex = CurrentIndex + 1
-
-                        if CurrentIndex > #Colours then
-                            CurrentIndex = 1
-                            MinimumIndex = 1
-                        elseif CurrentIndex > MinimumIndex + Maximum - 1 then
-                            MinimumIndex = MinimumIndex + 1
-                        end
-                    elseif Hovered then
-                        for Index = 1, Maximum do
-                            if RageUI.IsMouseInBounds(CurrentMenu.X + Colour.Box.X + (Colour.Box.Width * (Index - 1)) + CurrentMenu.SafeZoneSize.X + (CurrentMenu.WidthOffset / 2), CurrentMenu.Y + Colour.Box.Y + CurrentMenu.SafeZoneSize.Y + CurrentMenu.SubtitleHeight + RageUI.ItemOffset, Colour.Box.Width, Colour.Box.Height) then
-                                CurrentIndex = MinimumIndex + Index - 1
-                            end
-                        end
-                    end
-
-                    if (Action.onColorChange ~= nil) then
-                        Action.onColorChange(MinimumIndex, CurrentIndex)
-                    end
-                end
-            end
-
-            RageUI.ItemOffset = RageUI.ItemOffset + Colour.Background.Height + Colour.Background.Y
-
-            if (Hovered or LeftArrowHovered or RightArrowHovered) and RageUI.Settings.Controls.Click.Active then
-                local Audio = RageUI.Settings.Audio
-                RageUI.PlaySound(Audio[Audio.Use].Select.audioName, Audio[Audio.Use].Select.audioRef)
             end
         end
+        
+        if Action.onColorChange then
+            Action.onColorChange(MinimumIndex, CurrentIndex)
+        end
+        
+        local Audio = RageUI.Settings.Audio
+        RageUI.PlaySound(Audio[Audio.Use].Select.audioName, Audio[Audio.Use].Select.audioRef)
     end
+    
+    RageUI.ItemOffset = itemOff + CLR_BG_H + CLR_BG_Y
 end

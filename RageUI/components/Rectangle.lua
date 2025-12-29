@@ -1,11 +1,9 @@
-local INV_WIDTH = 1 / 1920
-local INV_HEIGHT = 1 / 1080
+-- Constantes pré-calculées
+local INV_WIDTH = 0.000520833333333 -- 1/1920
+local INV_HEIGHT = 0.000925925925926 -- 1/1080
 local _DrawRect = DrawRect
 
----RenderRectangle
----
---- Reference : https://github.com/iTexZoz/NativeUILua_Reloaded/blob/master/UIElements/UIResRectangle.lua#L84
----
+---RenderRectangle - Optimisé
 ---@param X number
 ---@param Y number
 ---@param Width number
@@ -17,9 +15,7 @@ local _DrawRect = DrawRect
 ---@return nil
 ---@public
 function RenderRectangle(X, Y, Width, Height, R, G, B, A)
-    local nX = (X or 0) * INV_WIDTH
-    local nY = (Y or 0) * INV_HEIGHT
-    local nW = (Width or 0) * INV_WIDTH
-    local nH = (Height or 0) * INV_HEIGHT
-    _DrawRect(nX + nW * 0.5, nY + nH * 0.5, nW, nH, R or 255, G or 255, B or 255, A or 255)
+    local nW = Width * INV_WIDTH
+    local nH = Height * INV_HEIGHT
+    _DrawRect(X * INV_WIDTH + nW * 0.5, Y * INV_HEIGHT + nH * 0.5, nW, nH, R, G, B, A)
 end

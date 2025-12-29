@@ -26,11 +26,11 @@ function RageUI.CreateMenu(Title, Subtitle, X, Y, TextureDictionary, TextureName
     Menu.InstructionalButtons = {}
 
     Menu.Display.Header = true;
-    Menu.Display.Glare = true;
+    Menu.Display.Glare = false; -- DÉSACTIVÉ pour performances
     Menu.Display.Subtitle = true;
     Menu.Display.Background = true;
-    Menu.Display.Navigation = true;
-    Menu.Display.InstructionalButton = true;
+    Menu.Display.Navigation = false; -- DÉSACTIVÉ pour performances
+    Menu.Display.InstructionalButton = false; -- DÉSACTIVÉ pour performances
     Menu.Display.PageCounter = true;
     Menu.Display.AcceptFilter = false;
 
@@ -75,21 +75,16 @@ function RageUI.CreateMenu(Title, Subtitle, X, Y, TextureDictionary, TextureName
         end
     end
 
-    Citizen.CreateThread(function()
-        if not HasScaleformMovieLoaded(Menu.InstructionalScaleform) then
-            Menu.InstructionalScaleform = RequestScaleformMovie("INSTRUCTIONAL_BUTTONS")
-            while not HasScaleformMovieLoaded(Menu.InstructionalScaleform) do
-                Citizen.Wait(0)
+    if Menu.Display.InstructionalButton then
+        Citizen.CreateThread(function()
+            if not HasScaleformMovieLoaded(Menu.InstructionalScaleform) then
+                Menu.InstructionalScaleform = RequestScaleformMovie("INSTRUCTIONAL_BUTTONS")
+                while not HasScaleformMovieLoaded(Menu.InstructionalScaleform) do
+                    Citizen.Wait(0)
+                end
             end
-        end
-    end)
-
-    Citizen.CreateThread(function()
-        local ScaleformMovie = RequestScaleformMovie("MP_MENU_GLARE")
-        while not HasScaleformMovieLoaded(ScaleformMovie) do
-            Citizen.Wait(0)
-        end
-    end)
+        end)
+    end
 
     return setmetatable(Menu, RageUI.Menus)
 end
