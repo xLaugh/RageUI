@@ -20,10 +20,10 @@ local _sub = string.sub
 local _ceil = math.ceil
 local _len = string.len
 
--- Cache pour les largeurs de texte mesurées
+-- Cache imbriqué par scale : évite la concat de clé et la falaise silencieuse
+-- de l'ancien cache plat plafonné à 200 entrées (au-delà, plus rien n'était
+-- mémorisé). Mémoire dominée par les strings elles-mêmes ; pas de cap dur.
 local textWidthCache = {}
-local textWidthCacheSize = 0
-local MAX_CACHE_SIZE = 200
 
 ---MeasureStringWidth - Avec cache
 ---@param str string
@@ -32,23 +32,23 @@ local MAX_CACHE_SIZE = 200
 ---@return number
 ---@public
 function MeasureStringWidth(str, font, scale)
-    local cacheKey = str .. "_" .. (scale or 0)
-    if textWidthCache[cacheKey] then
-        return textWidthCache[cacheKey]
+    local s = scale or 0
+    local sub = textWidthCache[s]
+    if sub then
+        local cached = sub[str]
+        if cached then return cached end
+    else
+        sub = {}
+        textWidthCache[s] = sub
     end
-    
+
     _BeginTextCommandWidth("CELL_EMAIL_BCON")
     _AddTextComponentSubstringPlayerName(str)
     _SetTextFont(0)
-    _SetTextScale(1.0, scale or 0)
+    _SetTextScale(1.0, s)
     local width = _EndTextCommandGetWidth(true) * 1920
-    
-    -- Cache avec limite de taille
-    if textWidthCacheSize < MAX_CACHE_SIZE then
-        textWidthCache[cacheKey] = width
-        textWidthCacheSize = textWidthCacheSize + 1
-    end
-    
+
+    sub[str] = width
     return width
 end
 
@@ -105,25 +105,26 @@ function GetLineCount(Text, X, Y, Font, Scale, R, G, B, A, Alignment, DropShadow
     
     if Alignment == ALIGN_CENTER then
         _SetTextCentre(true)
-    elseif Alignment == 4 then
+    elseif Alignment == ALIGN_RIGHT then
         _SetTextRightJustify(true)
     end
-    
+
     if WordWrap and WordWrap ~= 0 then
         local wrapW = WordWrap * INV_WIDTH
         if Alignment == ALIGN_CENTER then
             _SetTextWrap(nX - wrapW * 0.5, nX + wrapW * 0.5)
-        elseif Alignment == 4 then
-            _SetTextWrap(4)
+        elseif Alignment == ALIGN_RIGHT then
+            _SetTextWrap(0, nX)
         else
             _SetTextWrap(nX, nX + wrapW)
         end
-    elseif Alignment == 4 then
+    elseif Alignment == ALIGN_RIGHT then
         _SetTextWrap(0, nX)
     end
 
     _BeginTextCommandLineCount("CELL_EMAIL_BCON")
-    AddText(_tostring(Text))
+    if type(Text) ~= "string" then Text = _tostring(Text) end
+    AddText(Text)
     return _GetTextScreenLineCount(nX, nY)
 end
 
@@ -174,6 +175,7 @@ function RenderText(Text, X, Y, Font, Scale, R, G, B, A, Alignment, DropShadow, 
     end
     
     _BeginTextCommandDisplayText("CELL_EMAIL_BCON")
-    AddText(_tostring(Text))
+    if type(Text) ~= "string" then Text = _tostring(Text) end
+    AddText(Text)
     _EndTextCommandDisplayText(nX, nY)
 end

@@ -1,3 +1,5 @@
+local _GetBadge = RageUI.GetBadge
+
 -- Constantes pré-extraites
 local CB_RECT_H = 38
 local CB_TEXT_X = 8
@@ -92,14 +94,18 @@ function RageUI.Checkbox(Label, Description, Checked, Style, Actions)
             RenderText(Label, menuX + CB_TEXT_X + LeftBadgeOffset, menuY + CB_TEXT_Y + subH + itemOff, 0, CB_TEXT_SCALE, textColor, textColor, textColor, 255)
 
             if Style.LeftBadge and Style.LeftBadge ~= RageUI.BadgeStyle.None then
-                local badge = Style.LeftBadge(Selected)
+                local badge = _GetBadge(Style.LeftBadge, Selected)
                 local bc = badge.BadgeColour
-                RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + CB_LBADGE_Y + subH + itemOff, CB_LBADGE_W, CB_LBADGE_H, 0, bc and bc.R or 255, bc and bc.G or 255, bc and bc.B or 255, bc and bc.A or 255)
+                local r, g, b, a = 255, 255, 255, 255
+                if bc then r, g, b, a = bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255 end
+                RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + CB_LBADGE_Y + subH + itemOff, CB_LBADGE_W, CB_LBADGE_H, 0, r, g, b, a)
             end
             if Style.RightBadge and Style.RightBadge ~= RageUI.BadgeStyle.None then
-                local badge = Style.RightBadge(Selected)
+                local badge = _GetBadge(Style.RightBadge, Selected)
                 local bc = badge.BadgeColour
-                RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX + CB_RBADGE_X + widthOff, menuY + CB_RBADGE_Y + subH + itemOff, CB_RBADGE_W, CB_RBADGE_H, 0, bc and bc.R or 255, bc and bc.G or 255, bc and bc.B or 255, bc and bc.A or 255)
+                local r, g, b, a = 255, 255, 255, 255
+                if bc then r, g, b, a = bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255 end
+                RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX + CB_RBADGE_X + widthOff, menuY + CB_RBADGE_Y + subH + itemOff, CB_RBADGE_W, CB_RBADGE_H, 0, r, g, b, a)
             end
 
             if Style.RightLabel and Style.RightLabel ~= "" then
@@ -107,12 +113,13 @@ function RageUI.Checkbox(Label, Description, Checked, Style, Actions)
                 BoxOffset = MeasureStringWidth(Style.RightLabel, 0, 0.35)
             end
         else
-            local LockBadge = RageUI.BadgeStyle.Lock
             local lockOffset = 27
             RenderText(Label, menuX + CB_TEXT_X + lockOffset, menuY + CB_TEXT_Y + subH + itemOff, 0, CB_TEXT_SCALE, Selected and 0 or 163, Selected and 0 or 159, Selected and 0 or 148, 255)
-            local badge = LockBadge(Selected)
+            local badge = _GetBadge(RageUI.BadgeStyle.Lock, Selected)
             local bc = badge.BadgeColour
-            RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + CB_LBADGE_Y + subH + itemOff, CB_LBADGE_W, CB_LBADGE_H, 0, bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255)
+            local r, g, b, a = 255, 255, 255, 255
+            if bc then r, g, b, a = bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255 end
+            RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + CB_LBADGE_Y + subH + itemOff, CB_LBADGE_W, CB_LBADGE_H, 0, r, g, b, a)
         end
 
         BoxOffset = RightBadgeOffset + BoxOffset

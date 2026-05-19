@@ -22,6 +22,35 @@ local LST_LIST_Y = 3
 local LST_LIST_SCALE = 0.35
 
 local _strfmt = string.format
+local _GetBadge = RageUI.GetBadge
+
+-- Cache du libellé formaté "← Nom →" indexé par référence de table Items.
+-- Clé faible : libère automatiquement quand l'Items table sort de portée.
+-- Note : on stocke aussi la dernière `item` vue ; si le consommateur remplace
+-- `items[index]` ou la table elle-même, la cache se régénère. Mutation
+-- en place de `item.Name` non détectée (cas marginal).
+local listTextCache = setmetatable({}, { __mode = "k" })
+local function getListText(items, index, item)
+    local entry = listTextCache[items]
+    if entry and entry.index == index and entry.item == item then
+        return entry.text
+    end
+    local name
+    if item == nil then
+        name = "NIL"
+    elseif type(item) == "table" then
+        name = item.Name
+    else
+        name = item
+    end
+    local text = _strfmt("← %s →", name)
+    if not entry then
+        entry = {}
+        listTextCache[items] = entry
+    end
+    entry.index, entry.item, entry.text = index, item, text
+    return text
+end
 
 ---@type table
 local SettingsButton = {
@@ -65,7 +94,7 @@ function RageUI.List(Label, Items, Index, Description, Style, Enabled, Actions, 
         local RightOffset = 0
 
         local item = Items[Index]
-        local ListText = (type(item) == "table") and _strfmt("← %s →", item.Name) or _strfmt("← %s →", item) or "NIL"
+        local ListText = getListText(Items, Index, item)
 
         if Selected then
             RenderSprite(LST_SEL_DICT, LST_SEL_TEX, menuX, menuY + subH + itemOff, LST_SEL_W + widthOff, LST_SEL_H)
@@ -96,31 +125,38 @@ function RageUI.List(Label, Items, Index, Description, Style, Enabled, Actions, 
         local styleEnabled = Style.Enabled == true or Style.Enabled == nil
         if styleEnabled then
             if Style.LeftBadge and Style.LeftBadge ~= RageUI.BadgeStyle.None then
-                local badge = Style.LeftBadge(Selected)
+                local badge = _GetBadge(Style.LeftBadge, Selected)
                 local bc = badge.BadgeColour
-                RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + LST_LBADGE_Y + subH + itemOff, LST_LBADGE_W, LST_LBADGE_H, 0, bc and bc.R or 255, bc and bc.G or 255, bc and bc.B or 255, bc and bc.A or 255)
+                local r, g, b, a = 255, 255, 255, 255
+                if bc then r, g, b, a = bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255 end
+                RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + LST_LBADGE_Y + subH + itemOff, LST_LBADGE_W, LST_LBADGE_H, 0, r, g, b, a)
             end
             if Style.RightBadge and Style.RightBadge ~= RageUI.BadgeStyle.None then
-                local badge = Style.RightBadge(Selected)
+                local badge = _GetBadge(Style.RightBadge, Selected)
                 local bc = badge.BadgeColour
-                RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX + LST_RBADGE_X + widthOff, menuY + LST_RBADGE_Y + subH + itemOff, LST_RBADGE_W, LST_RBADGE_H, 0, bc and bc.R or 255, bc and bc.G or 255, bc and bc.B or 255, bc and bc.A or 255)
+                local r, g, b, a = 255, 255, 255, 255
+                if bc then r, g, b, a = bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255 end
+                RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX + LST_RBADGE_X + widthOff, menuY + LST_RBADGE_Y + subH + itemOff, LST_RBADGE_W, LST_RBADGE_H, 0, r, g, b, a)
             end
         else
-            local LockBadge = RageUI.BadgeStyle.Lock
-            local badge = LockBadge(Selected)
+            local badge = _GetBadge(RageUI.BadgeStyle.Lock, Selected)
             local bc = badge.BadgeColour
-            RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + LST_LBADGE_Y + subH + itemOff, LST_LBADGE_W, LST_LBADGE_H, 0, bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255)
+            local r, g, b, a = 255, 255, 255, 255
+            if bc then r, g, b, a = bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255 end
+            RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + LST_LBADGE_Y + subH + itemOff, LST_LBADGE_W, LST_LBADGE_H, 0, r, g, b, a)
         end
-
-        local listTextWidth = MeasureStringWidth(ListText, 0, LST_LIST_SCALE)
-        local LeftArrowHovered = RageUI.IsMouseInBounds(menuX + LST_LIST_X + widthOff - RightOffset + safeX, menuY + LST_LIST_Y + subH + itemOff + 2.5 + safeY, 15, 22.5)
-        local RightArrowHovered = RageUI.IsMouseInBounds(menuX + LST_LIST_X + widthOff + safeX - RightOffset - listTextWidth, menuY + LST_LIST_Y + subH + itemOff + 2.5 + safeY, 15, 22.5)
 
         RageUI.ItemOffset = itemOff + LST_RECT_H
         RageUI.ItemsDescription(CurrentMenu, Description, Selected)
 
         local controls = CurrentMenu.Controls
         if Selected then
+            -- Mesure du texte + bounds des flèches uniquement pour l'item sélectionné
+            -- (les flèches gauche/droite ne sont actives que sur la sélection courante).
+            local listTextWidth = MeasureStringWidth(ListText, 0, LST_LIST_SCALE)
+            local LeftArrowHovered = RageUI.IsMouseInBounds(menuX + LST_LIST_X + widthOff - RightOffset + safeX, menuY + LST_LIST_Y + subH + itemOff + 2.5 + safeY, 15, 22.5)
+            local RightArrowHovered = RageUI.IsMouseInBounds(menuX + LST_LIST_X + widthOff + safeX - RightOffset - listTextWidth, menuY + LST_LIST_Y + subH + itemOff + 2.5 + safeY, 15, 22.5)
+
             local leftActive = controls.Left.Active or (controls.Click.Active and LeftArrowHovered)
             local rightActive = controls.Right.Active or (controls.Click.Active and RightArrowHovered)
 

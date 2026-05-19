@@ -19,6 +19,7 @@ local BTN_SEL_DICT = "commonmenu"
 local BTN_SEL_TEX = "gradient_nav"
 
 local _IsControlJustPressed = IsControlJustPressed
+local _GetBadge = RageUI.GetBadge
 
 ---@type table
 local SettingsButton = {
@@ -69,14 +70,18 @@ local function RenderButtonItem(CurrentMenu, Label, Description, Style, Enabled,
 
     if Enabled then
         if haveLeftBadge and Style.LeftBadge then
-            local badge = Style.LeftBadge(Active)
+            local badge = _GetBadge(Style.LeftBadge, Active)
             local bc = badge.BadgeColour
-            RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + BTN_LBADGE_Y + subH + itemOff, BTN_LBADGE_W, BTN_LBADGE_H, 0, bc and bc.R or 255, bc and bc.G or 255, bc and bc.B or 255, bc and bc.A or 255)
+            local r, g, b, a = 255, 255, 255, 255
+            if bc then r, g, b, a = bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255 end
+            RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + BTN_LBADGE_Y + subH + itemOff, BTN_LBADGE_W, BTN_LBADGE_H, 0, r, g, b, a)
         end
         if haveRightBadge and Style.RightBadge then
-            local badge = Style.RightBadge(Active)
+            local badge = _GetBadge(Style.RightBadge, Active)
             local bc = badge.BadgeColour
-            RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX + BTN_RBADGE_X + widthOff, menuY + BTN_RBADGE_Y + subH + itemOff, BTN_RBADGE_W, BTN_RBADGE_H, 0, bc and bc.R or 255, bc and bc.G or 255, bc and bc.B or 255, bc and bc.A or 255)
+            local r, g, b, a = 255, 255, 255, 255
+            if bc then r, g, b, a = bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255 end
+            RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX + BTN_RBADGE_X + widthOff, menuY + BTN_RBADGE_Y + subH + itemOff, BTN_RBADGE_W, BTN_RBADGE_H, 0, r, g, b, a)
         end
         if Style.RightLabel then
             RenderText(Style.RightLabel, menuX + BTN_RTEXT_X - RightBadgeOffset + widthOff, menuY + BTN_RTEXT_Y + subH + itemOff, 0, BTN_RTEXT_SCALE, textColor, textColor, textColor, 255, 2)
@@ -84,9 +89,11 @@ local function RenderButtonItem(CurrentMenu, Label, Description, Style, Enabled,
         RenderText(Label, menuX + BTN_TEXT_X + LeftBadgeOffset, menuY + BTN_TEXT_Y + subH + itemOff, 0, BTN_TEXT_SCALE, textColor, textColor, textColor, 255)
     else
         if haveRightBadge then
-            local badge = RageUI.BadgeStyle.Lock(Active)
+            local badge = _GetBadge(RageUI.BadgeStyle.Lock, Active)
             local bc = badge.BadgeColour
-            RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX + BTN_RBADGE_X + widthOff, menuY + BTN_RBADGE_Y + subH + itemOff, BTN_RBADGE_W, BTN_RBADGE_H, 0, bc and bc.R or 255, bc and bc.G or 255, bc and bc.B or 255, bc and bc.A or 255)
+            local r, g, b, a = 255, 255, 255, 255
+            if bc then r, g, b, a = bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255 end
+            RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX + BTN_RBADGE_X + widthOff, menuY + BTN_RBADGE_Y + subH + itemOff, BTN_RBADGE_W, BTN_RBADGE_H, 0, r, g, b, a)
         end
         RenderText(Label, menuX + BTN_TEXT_X + LeftBadgeOffset, menuY + BTN_TEXT_Y + subH + itemOff, 0, BTN_TEXT_SCALE, 163, 159, 148, 255)
     end

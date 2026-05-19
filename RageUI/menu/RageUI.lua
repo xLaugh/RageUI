@@ -77,6 +77,29 @@ RageUI.Cache = {
     KeyboardStateFrame = 0,
 }
 
+-- Mémo des callbacks Badge : clés faibles sur la fonction => libération auto
+-- quand le style/menu sort de portée. Évite que les items réallouent une table
+-- badge à chaque frame quand le callback renvoie un table literal.
+local badgeMemo = setmetatable({}, { __mode = "k" })
+
+---GetBadge - Mémo des callbacks Style.LeftBadge/RightBadge par (fn, active).
+---@param fn fun(active:boolean):table
+---@param active boolean
+---@return table
+function RageUI.GetBadge(fn, active)
+    local sub = badgeMemo[fn]
+    if not sub then
+        sub = {}
+        badgeMemo[fn] = sub
+    end
+    local b = sub[active]
+    if b == nil then
+        b = fn(active)
+        sub[active] = b
+    end
+    return b
+end
+
 ---@class UISize
 RageUI.UI = {
     Current = "NativeUI",
@@ -601,7 +624,7 @@ function RageUI.Render()
     end
 
     CurrentMenu.Options = RageUI.Options
-    CurrentMenu.SafeZoneSize = nil
+    CurrentMenu._safeZoneDirty = true
     RageUI.Controls()
     RageUI.Options = 0
     RageUI.StatisticPanelCount = 0
@@ -688,18 +711,25 @@ function RageUI.ItemsMouseBounds(CurrentMenu, Selected, Option, SettingsButton)
     return Hovered
 end
 
--- Cache local pour éviter les recalculs
-local _safeZoneInitialized = false
-
 function RageUI.ItemsSafeZone(CurrentMenu)
-    if CurrentMenu.SafeZoneSize then return end
-    
-    CurrentMenu.SafeZoneSize = { X = 0, Y = 0 }
+    if CurrentMenu.SafeZoneSize and not CurrentMenu._safeZoneDirty then return end
+
+    local sz = CurrentMenu.SafeZoneSize
+    if not sz then
+        sz = { X = 0, Y = 0 }
+        CurrentMenu.SafeZoneSize = sz
+    else
+        sz.X, sz.Y = 0, 0
+    end
+
     if CurrentMenu.Safezone then
-        CurrentMenu.SafeZoneSize = RageUI.GetSafeZoneBounds()
+        local bounds = RageUI.GetSafeZoneBounds()
+        sz.X, sz.Y = bounds.X, bounds.Y
         _SetScriptGfxAlign(76, 84)
         _SetScriptGfxAlignParams(0, 0, 0, 0)
     end
+
+    CurrentMenu._safeZoneDirty = false
 end
 
 function RageUI.CurrentIsEqualTo(Current, To, Style, DefaultStyle)

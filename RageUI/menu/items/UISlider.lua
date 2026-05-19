@@ -1,3 +1,5 @@
+local _GetBadge = RageUI.GetBadge
+
 -- Constantes pré-extraites
 local SLD_RECT_H = 38
 local SLD_TEXT_X = 8
@@ -118,20 +120,25 @@ function RageUI.Slider(Label, ProgressStart, ProgressMax, Description, Divider, 
         local styleEnabled = Style.Enabled == true or Style.Enabled == nil
         if styleEnabled then
             if Style.LeftBadge and Style.LeftBadge ~= RageUI.BadgeStyle.None then
-                local badge = Style.LeftBadge(Selected)
+                local badge = _GetBadge(Style.LeftBadge, Selected)
                 local bc = badge.BadgeColour
-                RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + SLD_LBADGE_Y + subH + itemOff, SLD_LBADGE_W, SLD_LBADGE_H, 0, bc and bc.R or 255, bc and bc.G or 255, bc and bc.B or 255, bc and bc.A or 255)
+                local r, g, b, a = 255, 255, 255, 255
+                if bc then r, g, b, a = bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255 end
+                RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + SLD_LBADGE_Y + subH + itemOff, SLD_LBADGE_W, SLD_LBADGE_H, 0, r, g, b, a)
             end
             if Style.RightBadge and Style.RightBadge ~= RageUI.BadgeStyle.None then
-                local badge = Style.RightBadge(Selected)
+                local badge = _GetBadge(Style.RightBadge, Selected)
                 local bc = badge.BadgeColour
-                RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX + SLD_RBADGE_X + widthOff, menuY + SLD_RBADGE_Y + subH + itemOff, SLD_RBADGE_W, SLD_RBADGE_H, 0, bc and bc.R or 255, bc and bc.G or 255, bc and bc.B or 255, bc and bc.A or 255)
+                local r, g, b, a = 255, 255, 255, 255
+                if bc then r, g, b, a = bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255 end
+                RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX + SLD_RBADGE_X + widthOff, menuY + SLD_RBADGE_Y + subH + itemOff, SLD_RBADGE_W, SLD_RBADGE_H, 0, r, g, b, a)
             end
         else
-            local LockBadge = RageUI.BadgeStyle.Lock
-            local badge = LockBadge(Selected)
+            local badge = _GetBadge(RageUI.BadgeStyle.Lock, Selected)
             local bc = badge.BadgeColour
-            RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + SLD_LBADGE_Y + subH + itemOff, SLD_LBADGE_W, SLD_LBADGE_H, 0, bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255)
+            local r, g, b, a = 255, 255, 255, 255
+            if bc then r, g, b, a = bc.R or 255, bc.G or 255, bc.B or 255, bc.A or 255 end
+            RenderSprite(badge.BadgeDictionary or "commonmenu", badge.BadgeTexture or "", menuX, menuY + SLD_LBADGE_Y + subH + itemOff, SLD_LBADGE_W, SLD_LBADGE_H, 0, r, g, b, a)
         end
 
         -- Slider background & slider

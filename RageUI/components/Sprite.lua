@@ -4,21 +4,29 @@ local _DrawSprite = DrawSprite
 local _HasStreamedTextureDictLoaded = HasStreamedTextureDictLoaded
 local _RequestStreamedTextureDict = RequestStreamedTextureDict
 
--- Cache des textures chargées (initialisé avec les textures communes)
-local loadedTextures = {
-    ["commonmenu"] = true,
-    ["commonmenutu"] = true,
-    ["mpleaderboard"] = true,
-    ["mpinventory"] = true,
-    ["pause_menu_pages_char_mom_dad"] = true,
+-- Cache des textures chargées : la valeur passe à `true` une fois le streaming
+-- réellement effectif (et non au moment de la demande). Évite que les
+-- premières frames ne dessinent sur une texture pas encore chargée.
+local COMMON_TEXTURES = {
+    "commonmenu",
+    "commonmenutu",
+    "mpleaderboard",
+    "mpinventory",
+    "pause_menu_pages_char_mom_dad",
 }
+local loadedTextures = {}
 
 -- Pré-charger les textures communes au démarrage
 Citizen.CreateThread(function()
-    for dict in pairs(loadedTextures) do
+    for i = 1, #COMMON_TEXTURES do
+        local dict = COMMON_TEXTURES[i]
         if not _HasStreamedTextureDictLoaded(dict) then
             _RequestStreamedTextureDict(dict, true)
+            while not _HasStreamedTextureDictLoaded(dict) do
+                Citizen.Wait(0)
+            end
         end
+        loadedTextures[dict] = true
     end
 end)
 
